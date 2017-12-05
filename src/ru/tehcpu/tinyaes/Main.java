@@ -2,12 +2,14 @@ package ru.tehcpu.tinyaes;
 
 import ru.tehcpu.tinyaes.core.AES;
 
+import javax.crypto.Cipher;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Scanner;
 
 public class Main {
+    private static AES cipher;
 
     public static void main(String[] args) {
         if (args.length < 1) {
@@ -20,45 +22,24 @@ public class Main {
 
         // Input prepare stuff
         text = fillBlock(text);
+        byte[] inputText = text.getBytes();
 
-        byte[] ciphertext = encrypt(text.getBytes(), key);
-        System.out.println("Encrypted text: "+new String(ciphertext)+" | Key: "+new String(key));
+        // ECB test
+        cipher = new AES(key);
 
-        Scanner reader = new Scanner(System.in);
-        System.out.print("Decrypt? [y/n] (y): ");
-        String decision = reader.nextLine();
-        if (decision.equals("y") || decision.equals("")) {
-            byte[] plaintext = decrypt(ciphertext, key);
-            System.out.println("Plaintext: "+new String(plaintext));
-        } else {
-            System.out.println("Bye");
-        }
-    }
+        double startTime = System.currentTimeMillis();
+        for (int i=0; i < 100000; i++) cipher.ECB_decrypt(cipher.ECB_encrypt(inputText));
+        double endTime = System.currentTimeMillis();
+        System.out.println("ECB | "+(endTime-startTime)/1000.0 + " secs");
 
-    private static byte[] encrypt(byte[] text, byte[] key) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        AES Cipher = new AES(key);
-        for (int i = 0; i < text.length; i+=16) {
-            try {
-                out.write(Cipher.encrypt(Arrays.copyOfRange(text, i, i + 16)));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return out.toByteArray();
-    }
+        // CBC test
+        byte[] iv = "c8IKDNGsbioSCfxWa6KT8A84SrlMwOUH".getBytes();
+        cipher = new AES(key, iv);
 
-    private static byte[] decrypt(byte[] text, byte[] key) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        AES Cipher = new AES(key);
-        for (int i = 0; i < text.length; i+=16) {
-            try {
-                out.write(Cipher.decrypt(Arrays.copyOfRange(text, i, i + 16)));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return out.toByteArray();
+        double startTimeCBC = System.currentTimeMillis();
+        for (int i=0; i < 100000; i++) cipher.CBC_decrypt(cipher.CBC_encrypt(inputText));
+        double endTimeCBC = System.currentTimeMillis();
+        System.out.println("CBC | "+(endTimeCBC-startTimeCBC)/1000.0 + " secs");
     }
 
     private static String fillBlock(String text) {

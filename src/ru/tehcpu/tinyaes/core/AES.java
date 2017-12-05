@@ -1,10 +1,13 @@
 package ru.tehcpu.tinyaes.core;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Arrays;
+
 /**
  * Created by tehcpu on 11/12/17.
  */
 public class AES {
-
     // current round index
     private int actual;
 
@@ -21,6 +24,9 @@ public class AES {
     // key stuff
     private int[] w;
     private int[] key;
+
+    // Initialization vector (only for CBC)
+    private byte[] iv;
 
     // necessary matrix for AES (sBox + inverted one & rCon)
     private static int[] sBox = new int[] {
@@ -78,16 +84,25 @@ public class AES {
             0xc6, 0x97, 0x35, 0x6a, 0xd4, 0xb3, 0x7d, 0xfa, 0xef, 0xc5, 0x91, 0x39, 0x72, 0xe4, 0xd3, 0xbd,
             0x61, 0xc2, 0x9f, 0x25, 0x4a, 0x94, 0x33, 0x66, 0xcc, 0x83, 0x1d, 0x3a, 0x74, 0xe8, 0xcb, 0x8d };
 
-    public AES(byte[] in) {
-        key = new int[in.length];
+    public AES(byte[] key) {
+        init(key, null);
+    }
 
-        for (int i = 0; i < in.length; i++) {
-            key[i] = in[i];
+    public AES(byte[] key, byte[] iv) {
+        init(key, iv);
+    }
+
+    private void init(byte[] key, byte[] iv) {
+        this.iv = iv;
+        this.key = new int[key.length];
+
+        for (int i = 0; i < key.length; i++) {
+            key[i] = key[i];
         }
 
         // AES standard (4*32) = 128 bits
         Nb = 4;
-        switch (in.length) {
+        switch (key.length) {
             // 128 bit key
             case 16:
                 Nr = 10;
@@ -116,15 +131,12 @@ public class AES {
 
         // Key expansion
         expandKey();
-
     }
-
 
     // The 128 bits of a state are an XOR offset applied to them with the 128 bits of the key expended.
     // s: state matrix that has Nb columns and 4 rows.
     // Round: A round of the key w to be added.
     // s: returns the addition of the key per round
-
     private int[][] addRoundKey(int[][] s, int round) {
         for (int c = 0; c < Nb; c++) {
             for (int r = 0; r < 4; r++) {
@@ -134,7 +146,7 @@ public class AES {
         return s;
     }
 
-    // Cipher/Decipher methods (general algorytm logic)
+    // Cipher/Decipher methods
     private int[][] cipher(int[][] in, int[][] out) {
         for (int i = 0; i < in.length; i++) {
             for (int j = 0; j < in[0].length; j++) {
@@ -180,7 +192,7 @@ public class AES {
 
     // Main cipher/decipher helper-methods (for 128-bit plain/cipher text in,
     // and 128-bit cipher/plain text out) produced by the encryption algorithm.
-    public byte[] encrypt(byte[] text) {
+    private byte[] encrypt(byte[] text) {
         if (text.length != 16) {
             throw new IllegalArgumentException("Only 16-byte blocks can be encrypted");
         }
@@ -201,7 +213,7 @@ public class AES {
         return out;
     }
 
-    public byte[] decrypt(byte[] text) {
+    private byte[] decrypt(byte[] text) {
         if (text.length != 16) {
             throw new IllegalArgumentException("Only 16-byte blocks can be encrypted");
         }
@@ -223,8 +235,7 @@ public class AES {
 
     }
 
-    // Algorytm's general methods
-
+    // Algorithm's general methods
     private int[][] invMixColumnas(int[][] state) {
         int temp0, temp1, temp2, temp3;
         for (int c = 0; c < Nb; c++) {
@@ -410,5 +421,74 @@ public class AES {
             return b << 1;
         }
         return (b << 1) ^ 0x11b;
+    }
+
+    private static byte[] xor(byte[] a, byte[] b) {
+        byte[] result = new byte[Math.min(a.length, b.length)];
+        for (int j = 0; j < result.length; j++) {
+            int xor = a[j] ^ b[j];
+            result[j] = (byte) (0xff & xor);
+        }
+        return result;
+    }
+
+    // Public methods
+    public byte[] ECB_encrypt(byte[] text) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (int i = 0; i < text.length; i+=16) {
+            try {
+                out.write(encrypt(Arrays.copyOfRange(text, i, i + 16)));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return out.toByteArray();
+    }
+
+    public byte[] ECB_decrypt(byte[] text) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (int i = 0; i < text.length; i+=16) {
+            try {
+                out.write(decrypt(Arrays.copyOfRange(text, i, i + 16)));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return out.toByteArray();
+    }
+
+    public byte[] CBC_encrypt(byte[] text) {
+        byte[] previousBlock = null;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (int i = 0; i < text.length; i+=16) {
+            byte[] part = Arrays.copyOfRange(text, i, i + 16);
+            try {
+                if (previousBlock == null) previousBlock = iv;
+                part = xor(previousBlock, part);
+                previousBlock = encrypt(part);
+                out.write(previousBlock);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return out.toByteArray();
+    }
+
+    public byte[] CBC_decrypt(byte[] text) {
+        byte[] previousBlock = null;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        for (int i = 0; i < text.length; i+=16) {
+            byte[] part = Arrays.copyOfRange(text, i, i + 16);
+            byte[] tmp = decrypt(part);
+            try {
+                if (previousBlock == null) previousBlock = iv;
+                tmp = xor(previousBlock, tmp);
+                previousBlock = part;
+                out.write(tmp);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return out.toByteArray();
     }
 }

@@ -97,7 +97,7 @@ public class AES {
         this.key = new int[key.length];
 
         for (int i = 0; i < key.length; i++) {
-            key[i] = key[i];
+            this.key[i] = key[i];
         }
 
         // AES standard (4*32) = 128 bits

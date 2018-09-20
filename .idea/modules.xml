@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/tinyaes.iml" filepath="$PROJECT_DIR$/tinyaes.iml" />
+      <module fileurl="file://$PROJECT_DIR$/tiny-AES.iml" filepath="$PROJECT_DIR$/tiny-AES.iml" />
     </modules>
   </component>
 </project>

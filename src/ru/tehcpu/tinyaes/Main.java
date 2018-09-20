@@ -2,12 +2,6 @@ package ru.tehcpu.tinyaes;
 
 import ru.tehcpu.tinyaes.core.AES;
 
-import javax.crypto.Cipher;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Scanner;
-
 public class Main {
     private static AES cipher;
 

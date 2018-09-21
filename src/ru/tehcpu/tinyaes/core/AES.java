@@ -149,7 +149,7 @@ public class AES {
     // Cipher/Decipher methods
     private int[][] cipher(int[][] in, int[][] out) {
         for (int i = 0; i < in.length; i++) {
-            for (int j = 0; j < in[0].length; j++) {
+            for (int j = 0; j < in.length; j++) {
                 out[i][j] = in[i][j];
             }
         }
